@@ -235,6 +235,7 @@ from . import (
     stablelm,
     starcoder2,
     superpoint,
+    superglue,
     swiftformer,
     swin,
     swin2sr,
