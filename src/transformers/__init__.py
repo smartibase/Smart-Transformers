@@ -1454,6 +1454,7 @@ else:
             "AutoModelForDepthEstimation",
             "AutoModelForDocumentQuestionAnswering",
             "AutoModelForImageClassification",
+            "AutoModelForImageMatching",
             "AutoModelForImageSegmentation",
             "AutoModelForImageTextToText",
             "AutoModelForImageToImage",
