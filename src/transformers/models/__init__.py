@@ -129,6 +129,7 @@ from . import (
     layoutxlm,
     led,
     levit,
+    lightglue,
     lilt,
     llama,
     llava,
