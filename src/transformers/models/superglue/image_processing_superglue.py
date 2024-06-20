@@ -241,7 +241,7 @@ def validate_and_format_image_pairs(images: ImageInput):
     return images
 
 
-class SuperGlueImageProcessor(BaseImageProcessor):
+class LightGlueImageProcessor(BaseImageProcessor):
     r"""
     Constructs a SuperGlue image processor.
 
