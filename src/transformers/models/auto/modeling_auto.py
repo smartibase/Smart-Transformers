@@ -144,6 +144,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("levit", "LevitModel"),
         ("lightglue", "LightGlueForKeypointMatching"),
         ("lilt", "LiltModel"),
+        ("lightglue", "LightGlueForKeypointMatching"),
         ("llama", "LlamaModel"),
         ("longformer", "LongformerModel"),
         ("longt5", "LongT5Model"),
