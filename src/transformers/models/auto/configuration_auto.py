@@ -205,7 +205,6 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("owlvit", "OwlViTConfig"),
         ("paligemma", "PaliGemmaConfig"),
         ("colpali", "ColPaliConfig"),
-        ("colpali", "ColPaliConfig"),
         ("patchtsmixer", "PatchTSMixerConfig"),
         ("patchtst", "PatchTSTConfig"),
         ("pegasus", "PegasusConfig"),
