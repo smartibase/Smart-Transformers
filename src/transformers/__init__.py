@@ -1274,6 +1274,7 @@ else:
         "Cache",
         "CacheConfig",
         "DynamicCache",
+        "DynamicSlidingWindowCache",
         "EncoderDecoderCache",
         "HQQQuantizedCache",
         "HybridCache",
