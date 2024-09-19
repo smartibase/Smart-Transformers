@@ -2986,14 +2986,14 @@ else:
     )
     _import_structure["models.colpali"].extend(
         [
-            "ColPaliForConditionalGeneration",
+            "ColPaliModel",
             "ColPaliPreTrainedModel",
             "ColPaliProcessor",
         ]
     )
     _import_structure["models.colpali"].extend(
         [
-            "ColPaliForConditionalGeneration",
+            "ColPaliModel",
             "ColPaliPreTrainedModel",
             "ColPaliProcessor",
         ]
@@ -5160,6 +5160,9 @@ if TYPE_CHECKING:
         CodeGenTokenizer,
     )
     from .models.cohere import CohereConfig
+    from .models.colpali import (
+        ColPaliConfig,
+    )
     from .models.conditional_detr import (
         ConditionalDetrConfig,
     )
@@ -5549,12 +5552,6 @@ if TYPE_CHECKING:
     )
     from .models.paligemma import (
         PaliGemmaConfig,
-    )
-    from .models.colpali import (
-        ColPaliConfig,
-    )
-    from .models.colpali import (
-        ColPaliConfig,
     )
     from .models.patchtsmixer import (
         PatchTSMixerConfig,
@@ -6622,6 +6619,11 @@ if TYPE_CHECKING:
             CohereModel,
             CoherePreTrainedModel,
         )
+        from .models.colpali import (
+            ColPaliModel,
+            ColPaliPreTrainedModel,
+            ColPaliProcessor,
+        )
         from .models.conditional_detr import (
             ConditionalDetrForObjectDetection,
             ConditionalDetrForSegmentation,
@@ -7590,16 +7592,6 @@ if TYPE_CHECKING:
             PaliGemmaForConditionalGeneration,
             PaliGemmaPreTrainedModel,
             PaliGemmaProcessor,
-        )
-        from .models.colpali import (
-            ColPaliForConditionalGeneration,
-            ColPaliPreTrainedModel,
-            ColPaliProcessor,
-        )
-        from .models.colpali import (
-            ColPaliForConditionalGeneration,
-            ColPaliPreTrainedModel,
-            ColPaliProcessor,
         )
         from .models.patchtsmixer import (
             PatchTSMixerForPrediction,
