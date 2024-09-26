@@ -648,7 +648,6 @@ _import_structure = {
     ],
     "models.paligemma": ["PaliGemmaConfig"],
     "models.colpali": ["ColPaliConfig"],
-    "models.colpali": ["ColPaliConfig"],
     "models.patchtsmixer": ["PatchTSMixerConfig"],
     "models.patchtst": ["PatchTSTConfig"],
     "models.pegasus": [
@@ -6613,7 +6612,6 @@ if TYPE_CHECKING:
         )
         from .models.colpali import (
             ColPaliModel,
-            ColPaliPreTrainedModel,
             ColPaliProcessor,
         )
         from .models.conditional_detr import (
