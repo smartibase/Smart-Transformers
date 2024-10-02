@@ -2075,7 +2075,7 @@ class GenerationTesterMixin:
             results_dynamic = model.generate(input_ids, attention_mask=attention_mask, **all_generation_kwargs, past_key_values=dynamic_cache)
             results_sliding_dynamic = model.generate(input_ids, attention_mask=attention_mask, **all_generation_kwargs, past_key_values=dynamic_sliding_cache)
 
-            self.assertListEqual(results_dynamic, results_sliding_dynamic)
+            self.assertTrue((results_dynamic ==results_sliding_dynamic).all())
 
 
     @parameterized.expand([False, True])
@@ -2110,7 +2110,7 @@ class GenerationTesterMixin:
             results_dynamic, dynamic_cache = out_dynamic.sequences, out_dynamic.past_key_values
             results_sliding_dynamic, dynamic_sliding_cache = out_sliding_dynamic.sequences, out_sliding_dynamic.past_key_values
 
-            self.assertListEqual(results_dynamic, results_sliding_dynamic)
+            self.assertTrue((results_dynamic ==results_sliding_dynamic).all())
 
             bs = results_dynamic.shape[0]
             num_added_tokens = 2 if not add_more_tokens_than_window else 4
@@ -2120,7 +2120,7 @@ class GenerationTesterMixin:
             out_dynamic = model.generate(input_ids, attention_mask=attention_mask, **all_generation_kwargs, past_key_values=dynamic_cache)
             out_sliding_dynamic = model.generate(input_ids, attention_mask=attention_mask, **all_generation_kwargs, past_key_values=dynamic_sliding_cache)
 
-            self.assertListEqual(out_dynamic.sequences, out_sliding_dynamic.sequences)
+            self.assertTrue((out_dynamic.sequences == out_sliding_dynamic.sequences).all())
 
     def _check_outputs(self, output, main_input, config, use_cache=False, num_return_sequences=1):
         # we can be sure what is batch size from main input but seq length depends on model type and whether input is text/audio/image
