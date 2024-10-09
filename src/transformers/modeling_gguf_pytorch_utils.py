@@ -20,16 +20,11 @@ from typing import Dict, Optional
 import numpy as np
 from tqdm import tqdm
 
-from .integrations import (
-    GGUF_CONFIG_MAPPING,
-    GGUF_TENSOR_MAPPING,
-    GGUF_TOKENIZER_MAPPING,
-    _gguf_parse_value,
-)
+from .integrations import (GGUF_CONFIG_MAPPING, GGUF_TENSOR_MAPPING,
+                           GGUF_TOKENIZER_MAPPING, _gguf_parse_value)
 from .utils import is_torch_available
 from .utils.import_utils import is_gguf_available
 from .utils.logging import get_logger
-
 
 if is_torch_available():
     import torch
@@ -80,7 +75,6 @@ def load_gguf_checkpoint(gguf_checkpoint_path, return_tensors=False):
             "https://pytorch.org/ and https://github.com/ggerganov/llama.cpp/tree/master/gguf-py for installation instructions."
         )
         raise ImportError("Please install torch and gguf>=0.10.0 to load a GGUF checkpoint in PyTorch.")
-
     reader = GGUFReader(gguf_checkpoint_path)
     fields = reader.fields
     reader_keys = list(fields.keys())

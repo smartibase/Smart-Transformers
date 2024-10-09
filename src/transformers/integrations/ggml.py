@@ -25,10 +25,10 @@ from tokenizers import Tokenizer, decoders, normalizers, pre_tokenizers
 from tokenizers.models import BPE
 
 from .. import AddedToken
-from ..convert_slow_tokenizer import GPT2Converter, LlamaConverter, Qwen2Converter
+from ..convert_slow_tokenizer import (GPT2Converter, LlamaConverter,
+                                      Qwen2Converter)
 from ..utils import logging
 from ..utils.logging import tqdm
-
 
 logger = logging.get_logger(__name__)
 
@@ -111,6 +111,20 @@ GGUF_TENSOR_MAPPING = {
         "attn_output": "self_attn.o_proj",
         "output.weight": "lm_head.weight",
         "output_norm": "model.norm",
+    },
+    "dbrx":{
+        "token_embd": "transformer.wt",
+        "blk": "transformer.blocks",
+        "ffn_up_exps": "norm_attn_norm.attn.Wqkv",
+        "ffn_down_exps": "ffn.experts.mlp.w2",
+        "ffn_gate_exps": "ffn.router.layer.weight",
+        "ffn_gate_inp": "norm_attn_norm.attn.out_proj",
+        "attn_norm": "ffn.experts.mlp.v1",
+        "attn_qkv": "ffn.experts.mlp.w1",
+        "attn_output": "norm_attn_norm.norm_1",
+        "attn_output_norm": "norm_attn_norm.norm_2",
+        "output.weight": "norm_f.weight",
+        "output_norm": "lm_head.weight	",
     },
     "bloom": {
         "token_embd.weight": "transformer.word_embeddings.weight",
@@ -237,6 +251,13 @@ GGUF_CONFIG_MAPPING = {
         "attention.head_count_kv": "num_key_value_heads",
         "attention.layer_norm_rms_epsilon": "rms_norm_eps",
         "vocab_size": "vocab_size",
+    },
+    "dbrx":{
+        "block_count": "n_layer",
+        "embedding_length": "hidden_size",
+        "attention.head_count": "n_head",
+        "vocab_size": "vocab_size",
+        "attention.layer_norm_epsilon": "layer_norm_epsilon",
     },
     "bloom": {
         "block_count": "n_layer",
@@ -478,7 +499,6 @@ class GGUFQwen2Converter(Qwen2Converter):
         )
         return tokenizer
 
-
 class GGUFPhi3Converter(LlamaConverter):
     def __init__(self, tokenizer_dict):
         self.proto = GGUFTokenizerSkeleton(tokenizer_dict)
@@ -571,6 +591,7 @@ GGUF_TO_FAST_CONVERTERS = {
     "qwen2": GGUFQwen2Converter,
     "qwen2_moe": GGUFQwen2Converter,
     "phi3": GGUFPhi3Converter,
+    "dbrx": GGUFBloomConverter,
     "bloom": GGUFBloomConverter,
     "falcon": GGUFBloomConverter,
 }

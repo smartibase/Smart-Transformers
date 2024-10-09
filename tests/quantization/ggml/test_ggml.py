@@ -16,14 +16,9 @@ import tempfile
 import unittest
 
 from transformers import AddedToken, AutoModelForCausalLM, AutoTokenizer
-from transformers.testing_utils import (
-    require_gguf,
-    require_torch_gpu,
-    slow,
-    torch_device,
-)
+from transformers.testing_utils import (require_gguf, require_torch_gpu, slow,
+                                        torch_device)
 from transformers.utils import is_torch_available
-
 
 if is_torch_available():
     import torch
@@ -43,6 +38,7 @@ class GgufIntegrationTests(unittest.TestCase):
     llama3_model_id = "NousResearch/Meta-Llama-3-8B-GGUF"
     tinyllama_model_id = "PenutChen/TinyLlama-1.1B-Chat-v1.0-GGUF"
     phi3_model_id = "microsoft/Phi-3-mini-4k-instruct-gguf"
+    dbrx_model_id = "dranger003/dbrx-instruct-iMat.GGUF"
     bloom_model_id = "afrideva/bloom-560m-GGUF"
     original_bloom_model_id = "bigscience/bloom-560m"
     falcon7b_model_id = "xaviviro/falcon-7b-quantized-gguf"
@@ -70,6 +66,7 @@ class GgufIntegrationTests(unittest.TestCase):
     iq4_xs_gguf_model_id = "TinyLlama-1.1B-Chat-v1.0-IQ4_XS.gguf"
     iq4_nl_gguf_model_id = "TinyLlama-1.1B-Chat-v1.0-IQ4_NL.gguf"
 
+    q1_s_dbrx_gguf_model_id="ggml-dbrx-instruct-16x12b-iq1_s.gguf"
     q4_0_phi3_model_id = "Phi-3-mini-4k-instruct-q4.gguf"
     q4_0_mistral_model_id = "mistral-7b-instruct-v0.2.Q4_0.gguf"
     q4_0_qwen2_model_id = "qwen1_5-0_5b-chat-q4_0.gguf"
