@@ -152,9 +152,8 @@ model2template = {
     "lmms-lab/LLaVA-NeXT-Video-34B": chat_yi,
     "lmms-lab/LLaVA-NeXT-Video-34B-DPO": chat_yi,
     "lmms-lab/LLaVA-Video-7B-Qwen2": chat_qwen,
-    "lmms-lab/LLaVA-Video-32B-Qwen2": chat_qwen,
+    "lmms-lab/LLaVA-Video-32B-Qwen": chat_qwen,
     "lmms-lab/LLaVA-Video-72B-Qwen2": chat_qwen,
-    "lmms-lab/LLaVA-Video-7B-Qwen2-Video-Only": chat_qwen,
 }
 
 
@@ -208,6 +207,16 @@ def convert_llava_to_hf(model_id, pytorch_dump_folder_path, push_to_hub=False):
         overwrite_text_config = {}
     elif model_id == "lmms-lab/LLaVA-Video-7B-Qwen2":
         text_model_id = "Qwen/Qwen2-7B-Instruct"
+        video_token_index = 151646
+        image_token_index = 151647
+        overwrite_text_config = {}
+    elif model_id == "lmms-lab/LLaVA-Video-32B-Qwen":
+        text_model_id = "Qwen/Qwen1.5-32B-Chat"
+        video_token_index = 151646
+        image_token_index = 151647
+        overwrite_text_config = {}
+    elif model_id == "lmms-lab/LLaVA-Video-72B-Qwen2":
+        text_model_id = "Qwen/Qwen2-72B-Instruct"
         video_token_index = 151646
         image_token_index = 151647
         overwrite_text_config = {}
@@ -330,9 +339,8 @@ if __name__ == "__main__":
             "lmms-lab/LLaVA-NeXT-Video-34B",
             "lmms-lab/LLaVA-NeXT-Video-34B-DPO",
             "lmms-lab/LLaVA-Video-7B-Qwen2",
-            "lmms-lab/LLaVA-Video-32B-Qwen2",
+            "lmms-lab/LLaVA-Video-32B-Qwen",
             "lmms-lab/LLaVA-Video-72B-Qwen2",
-            "lmms-lab/LLaVA-Video-7B-Qwen2-Video-Only",
         ],
         required=False,
     )
