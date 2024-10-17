@@ -245,6 +245,7 @@ from . import (
     time_series_transformer,
     timesformer,
     timm_backbone,
+    timm_wrapper,
     trocr,
     tvp,
     udop,
