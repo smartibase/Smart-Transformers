@@ -34,6 +34,7 @@ from huggingface_hub import (
     ImageToTextInput,
     ObjectDetectionInput,
     QuestionAnsweringInput,
+    VisualQuestionAnsweringInput,
     ZeroShotImageClassificationInput,
 )
 
@@ -47,6 +48,7 @@ from transformers.pipelines import (
     ImageToTextPipeline,
     ObjectDetectionPipeline,
     QuestionAnsweringPipeline,
+    VisualQuestionAnsweringPipeline,
     ZeroShotImageClassificationPipeline,
 )
 from transformers.testing_utils import (
@@ -132,6 +134,7 @@ task_to_pipeline_and_spec_mapping = {
     "image-to-text": (ImageToTextPipeline, ImageToTextInput),
     "object-detection": (ObjectDetectionPipeline, ObjectDetectionInput),
     "question-answering": (QuestionAnsweringPipeline, QuestionAnsweringInput),
+    "visual-question-answering": (VisualQuestionAnsweringPipeline, VisualQuestionAnsweringInput),
     "zero-shot-image-classification": (ZeroShotImageClassificationPipeline, ZeroShotImageClassificationInput),
 }
 
