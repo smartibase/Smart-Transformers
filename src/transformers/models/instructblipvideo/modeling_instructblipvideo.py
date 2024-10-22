@@ -24,7 +24,6 @@ from dataclasses import dataclass
 from typing import Any, Optional, Tuple, Union
 
 import torch
-import torch.utils.checkpoint
 from torch import nn
 from torch.nn import CrossEntropyLoss
 
