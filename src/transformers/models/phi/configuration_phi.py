@@ -69,10 +69,10 @@ class PhiConfig(PretrainedConfig):
             The standard deviation of the truncated_normal_initializer for initializing all weight matrices.
         layer_norm_eps (`float`, *optional*, defaults to 1e-05):
             The epsilon used by the rms normalization layers.
-        use_cache (`bool`, *optional*, defaults to True):
+        use_cache (`bool`, *optional*, defaults to `True`):
             Whether or not the model should return the last key/values attentions (not used by all models). Only
             relevant if `config.is_decoder=True`. Whether to tie weight embeddings or not.
-        tie_word_embeddings (`bool`, *optional*, defaults to False):
+        tie_word_embeddings (`bool`, *optional*, defaults to `False`):
             Whether to tie weight embeddings
         rope_theta (`float`, *optional*, defaults to 10000.0):
             The base period of the RoPE embeddings.
@@ -115,7 +115,7 @@ class PhiConfig(PretrainedConfig):
                     Only used with 'llama3'. Scaling factor applied to high frequency components of the RoPE
         partial_rotary_factor (`float`, *optional*, defaults to 0.5):
             Percentage of the query and keys which will have rotary embedding.
-        qk_layernorm (`bool`, *optional*, defaults to False):
+        qk_layernorm (`bool`, *optional*, defaults to `False`):
             Whether or not to normalize the Queries and Keys after projecting the hidden states.
         bos_token_id (`int`, *optional*, defaults to 1):
             Denotes beginning of sequences token id.
