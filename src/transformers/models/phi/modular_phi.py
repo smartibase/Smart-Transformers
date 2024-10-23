@@ -33,7 +33,6 @@ from ...modeling_outputs import (
     TokenClassifierOutput,
 )
 from ...modeling_rope_utils import rope_config_validation
-from ...modeling_utils import PreTrainedModel
 from ...utils import (
     get_torch_version,
     is_flash_attn_greater_or_equal_2_10,
@@ -750,8 +749,6 @@ class PhiDecoderLayer(nn.Module):
             outputs += (present_key_value,)
 
         return outputs
-
-
 
 
 class PhiModel(LlamaModel):
