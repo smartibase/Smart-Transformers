@@ -50,6 +50,8 @@ from .configuration_gemma2 import Gemma2Config
 
 _CHECKPOINT_FOR_DOC = "google/gemma2-7b"
 
+logger = logging.get_logger(__name__)
+
 
 class Gemma2RMSNorm(nn.Module):
     def __init__(self, dim: int, eps: float = 1e-6):
@@ -84,9 +86,6 @@ class Gemma2MLP(nn.Module):
 
     def forward(self, x):
         return self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
-
-
-logger = logging.get_logger(__name__)
 
 
 class Gemma2RotaryEmbedding(nn.Module):
@@ -198,12 +197,12 @@ class Gemma2Attention(nn.Module):
         self.k_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=config.attention_bias)
         self.v_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=config.attention_bias)
         self.o_proj = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, bias=config.attention_bias)
-        self.sliding_window = config.sliding_window if not bool(layer_idx % 2) else None
         self.rotary_emb = Gemma2RotaryEmbedding(
             self.head_dim,
             max_position_embeddings=self.max_position_embeddings,
             base=self.rope_theta,
         )
+        self.sliding_window = config.sliding_window if not bool(layer_idx % 2) else None
 
     def forward(
         self,
@@ -495,12 +494,12 @@ class Gemma2DecoderLayer(nn.Module):
         self.self_attn = GEMMA2_ATTENTION_CLASSES[config._attn_implementation](config=config, layer_idx=layer_idx)
         self.mlp = Gemma2MLP(config)
         self.input_layernorm = Gemma2RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+        self.post_attention_layernorm = Gemma2RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.config = config
         self.is_sliding = not bool(layer_idx % 2)
         self.pre_feedforward_layernorm = Gemma2RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.post_feedforward_layernorm = Gemma2RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.sliding_window = config.sliding_window
-        self.post_attention_layernorm = Gemma2RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
 
     def forward(
         self,
@@ -636,9 +635,6 @@ class Gemma2PreTrainedModel(PreTrainedModel):
             config._attn_implementation = "eager"
 
         return config
-
-
-_CONFIG_FOR_DOC = "Gemma2Config"
 
 
 GEMMA2_INPUTS_DOCSTRING = r"""
@@ -865,6 +861,7 @@ class Gemma2Model(Gemma2PreTrainedModel):
             attentions=all_self_attns,
         )
 
+    @torch.no_grad()
     def _update_causal_mask(
         self,
         attention_mask: torch.Tensor,
@@ -954,6 +951,9 @@ class Gemma2Model(Gemma2PreTrainedModel):
                 )
 
         return causal_mask
+
+
+_CONFIG_FOR_DOC = "Gemma2Config"
 
 
 class Gemma2ForCausalLM(Gemma2PreTrainedModel, GenerationMixin):
