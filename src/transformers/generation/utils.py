@@ -92,7 +92,6 @@ from .logits_process import (
     TopPLogitsWarper,
     TypicalLogitsWarper,
     UnbatchedClassifierFreeGuidanceLogitsProcessor,
-    WatermarkLogitsProcessor,
 )
 from .stopping_criteria import (
     ConfidenceCriteria,
@@ -390,13 +389,16 @@ class GenerationMixin:
         # 3. Prepare base model inputs
         input_ids_key = "decoder_input_ids" if self.config.is_encoder_decoder else "input_ids"
         # if `inputs_embeds` are passed, we only want to use them in the 1st generation step
-        if inputs_embeds is not None and not self.config.is_encoder_decoder and cache_position[0] == 0:
-            model_inputs[input_ids_key] = None
-            model_inputs["inputs_embeds"] = inputs_embeds
+        if not self.config.is_encoder_decoder:
+            if inputs_embeds is not None and cache_position[0] == 0:
+                model_inputs[input_ids_key] = None
+                model_inputs["inputs_embeds"] = inputs_embeds
+            else:
+                # `clone` calls in this function ensure a consistent stride. See #32227
+                model_inputs[input_ids_key] = input_ids.clone(memory_format=torch.contiguous_format)
+                model_inputs["inputs_embeds"] = None
         else:
-            # `clone` calls in this function ensure a consistent stride. See #32227
             model_inputs[input_ids_key] = input_ids.clone(memory_format=torch.contiguous_format)
-            model_inputs["inputs_embeds"] = None
 
         # 4. Create missing `position_ids` on the fly
         if (
@@ -428,10 +430,15 @@ class GenerationMixin:
 
             # Create the causal mask with fixed shape in advance, to reduce recompilations. If the function to create
             # the 4D causal mask exists, it should be present in the base model (XXXModel class).
-            base_model = getattr(self, self.base_model_prefix)
-            causal_mask_creation_function = getattr(
-                base_model, "_prepare_4d_causal_attention_mask_with_cache_position", None
-            )
+            base_model = getattr(self, self.base_model_prefix, None)
+            if base_model is None:
+                causal_mask_creation_function = getattr(
+                    self, "_prepare_4d_causal_attention_mask_with_cache_position", None
+                )
+            else:
+                causal_mask_creation_function = getattr(
+                    base_model, "_prepare_4d_causal_attention_mask_with_cache_position", None
+                )
             if causal_mask_creation_function is None:
                 logger.warning_once(
                     f"{self.__class__.__name__} has no `_prepare_4d_causal_attention_mask_with_cache_position` method "
@@ -444,10 +451,12 @@ class GenerationMixin:
                     attention_mask,
                     sequence_length=sequence_length,
                     target_length=past_key_values.get_max_cache_shape(),
-                    dtype=self.get_output_embeddings().weight.dtype,
+                    dtype=self.dtype,
                     device=device,
                     cache_position=cache_position,
                     batch_size=batch_size,
+                    config=self.config,
+                    past_key_values=past_key_values,
                 )
         if attention_mask is not None:
             model_inputs["attention_mask"] = attention_mask
@@ -1001,15 +1010,7 @@ class GenerationMixin:
             )
         if generation_config.watermarking_config is not None:
             processors.append(
-                WatermarkLogitsProcessor(
-                    vocab_size=self.config.vocab_size,
-                    device=device,
-                    greenlist_ratio=generation_config.watermarking_config.greenlist_ratio,
-                    bias=generation_config.watermarking_config.bias,
-                    hashing_key=generation_config.watermarking_config.hashing_key,
-                    seeding_scheme=generation_config.watermarking_config.seeding_scheme,
-                    context_width=generation_config.watermarking_config.context_width,
-                )
+                generation_config.watermarking_config.construct_processor(self.config.vocab_size, device)
             )
 
         # TODO (joao): find a strategy to specify the order of the processors
@@ -1439,6 +1440,11 @@ class GenerationMixin:
             and not self.config.is_encoder_decoder
         ):
             generation_config.max_length -= inputs_tensor.shape[1]
+        elif has_default_max_length:  # by default let's always generate 20 new tokens
+            generation_config.max_length = generation_config.max_length + input_ids_length
+            max_position_embeddings = getattr(self.config, "max_position_embeddings", None)
+            if max_position_embeddings is not None:
+                generation_config.max_length = min(generation_config.max_length, max_position_embeddings)
 
         # same for min length
         if generation_config.min_new_tokens is not None:
@@ -1525,8 +1531,12 @@ class GenerationMixin:
     def _get_initial_cache_position(self, input_ids, model_kwargs):
         """Calculates `cache_position` for the pre-fill stage based on `input_ids` and optionally past length"""
         # `torch.compile`-friendly `torch.arange` from a shape -- the lines below are equivalent to `torch.arange`
-        if "inputs_embeds" in model_kwargs:
+        if "inputs_embeds" in model_kwargs and not self.config.is_encoder_decoder:
             cache_position = torch.ones_like(model_kwargs["inputs_embeds"][0, :, 0], dtype=torch.int64).cumsum(0) - 1
+        elif "decoder_inputs_embeds" in model_kwargs and self.config.is_encoder_decoder:
+            cache_position = (
+                torch.ones_like(model_kwargs["decoder_inputs_embeds"][0, :, 0], dtype=torch.int64).cumsum(0) - 1
+            )
         else:
             cache_position = torch.ones_like(input_ids[0, :], dtype=torch.int64).cumsum(0) - 1
 
@@ -1623,7 +1633,7 @@ class GenerationMixin:
 
             cache_kwargs = {
                 "config": self.config.get_text_config(),
-                "max_batch_size": batch_size,
+                "batch_size": batch_size,
                 "max_cache_len": max_cache_len,
                 "device": device,
                 "dtype": cache_dtype,
