@@ -234,6 +234,7 @@ if is_accelerate_available():
         DistributedDataParallelKwargs,
         DistributedType,
         GradientAccumulationPlugin,
+        extract_model_from_parallel,
         load_fsdp_model,
         load_fsdp_optimizer,
         save_fsdp_model,
@@ -2257,6 +2258,10 @@ class Trainer:
         # this is for unhandled cases such as
         # FSDP-XLA, SageMaker MP/DP, DataParallel, IPEX
         use_accelerator_prepare = True if model is self.model else False
+
+        if use_accelerator_prepare and self.is_fsdp_enabled:
+            # Remove FSDP wrapping from sub-models.
+            self.model = extract_model_from_parallel(self.model, recursive=True)
 
         if delay_optimizer_creation:
             if use_accelerator_prepare:
