@@ -22,6 +22,7 @@ import unittest
 import pytest
 
 from transformers import (
+    BarkCausalModel,
     BarkCoarseConfig,
     BarkConfig,
     BarkFineConfig,
@@ -53,7 +54,6 @@ if is_torch_available():
     import torch
 
     from transformers import (
-        BarkCausalModel,
         BarkCoarseModel,
         BarkFineModel,
         BarkModel,
@@ -526,6 +526,8 @@ class BarkModelTester:
 
 @require_torch
 class BarkSemanticModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
+    # `BarkSemanticModel` inherits from `BarkCausalModel`, but requires an advanced generation config.
+    # `BarkCausalModel` does not, so we run generation tests there.
     all_model_classes = (BarkSemanticModel,) if is_torch_available() else ()
     all_generative_model_classes = (BarkCausalModel,) if is_torch_available() else ()
 
