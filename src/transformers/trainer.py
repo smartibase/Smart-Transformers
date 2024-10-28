@@ -2266,6 +2266,10 @@ class Trainer:
             # configure fsdp plugin for qlora if any
             self._fsdp_qlora_plugin_updates()
 
+        # configure fsdp plugin for qlora if any
+        if use_accelerator_prepare:
+            self._fsdp_qlora_plugin_updates()
+
         if delay_optimizer_creation:
             if use_accelerator_prepare:
                 self.model = self.accelerator.prepare(self.model)
