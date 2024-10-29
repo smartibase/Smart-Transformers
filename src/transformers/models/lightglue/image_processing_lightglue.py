@@ -11,18 +11,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Image processor class for SuperPoint."""
+"""Image processor class for LightGlue."""
 
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
+from typing import Dict, Optional, Union
 
 import numpy as np
 
-from ... import is_torch_available, is_vision_available
+from ... import is_vision_available
 from ...image_processing_utils import BaseImageProcessor, BatchFeature, get_size_dict
 from ...image_transforms import resize, to_channel_dimension_format
 from ...image_utils import (
     ChannelDimension,
     ImageInput,
+    PILImageResampling,
     infer_channel_dimension_format,
     is_scaled_image,
     make_list_of_images,
@@ -32,18 +33,13 @@ from ...image_utils import (
 from ...utils import TensorType, logging, requires_backends
 
 
-if is_torch_available():
-    import torch
-
-if TYPE_CHECKING:
-    from .modeling_superpoint import SuperPointKeypointDescriptionOutput
-
 if is_vision_available():
     import PIL
 
 logger = logging.get_logger(__name__)
 
 
+# Copied from transformers.models.superpoint.image_processing_superpoint.is_grayscale
 def is_grayscale(
     image: ImageInput,
     input_data_format: Optional[Union[str, ChannelDimension]] = None,
@@ -58,6 +54,7 @@ def is_grayscale(
         return np.all(image[..., 0] == image[..., 1]) and np.all(image[..., 1] == image[..., 2])
 
 
+# Copied from transformers.models.superpoint.image_processing_superpoint.convert_to_grayscale
 def convert_to_grayscale(
     image: ImageInput,
     input_data_format: Optional[Union[str, ChannelDimension]] = None,
@@ -96,9 +93,55 @@ def convert_to_grayscale(
     return image
 
 
-class SuperPointImageProcessor(BaseImageProcessor):
+def pad_images(images, pad_value=0, data_format: Optional[Union[str, ChannelDimension]] = None):
+    """
+    Given a list of images, pads them to the same height and width by adding `pad_value` around the edges.
+    Args:
+        images (`List[np.ndarray]`):
+            List of images to pad.
+        pad_value (`int`, *optional*, defaults to `0`):
+            Value to use for padding.
+        data_format (`ChannelDimension` or `str`, *optional*):
+            The channel dimension format for the output image. Can be one of:
+            - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
+            - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
+    Returns:
+        padded_images (`List[np.ndarray]`):
+            List of padded images.
+    """
+    if data_format == ChannelDimension.FIRST:
+        max_height = max(image.shape[1] for image in images)
+        max_width = max(image.shape[2] for image in images)
+    else:  # channels_last
+        max_height = max(image.shape[0] for image in images)
+        max_width = max(image.shape[1] for image in images)
+
+    padded_images = []
+
+    for image in images:
+        if data_format == ChannelDimension.FIRST:
+            channels, height, width = image.shape
+        else:
+            height, width, channels = image.shape
+
+        top_pad = (max_height - height) // 2
+        left_pad = (max_width - width) // 2
+
+        if data_format == ChannelDimension.FIRST:
+            padded_image = np.full((channels, max_height, max_width), pad_value, dtype=image.dtype)
+            padded_image[:, top_pad : top_pad + height, left_pad : left_pad + width] = image
+        else:
+            padded_image = np.full((max_height, max_width, channels), pad_value, dtype=image.dtype)
+            padded_image[top_pad : top_pad + height, left_pad : left_pad + width, :] = image
+
+        padded_images.append(padded_image)
+
+    return padded_images
+
+
+class LightGlueImageProcessor(BaseImageProcessor):
     r"""
-    Constructs a SuperPoint image processor.
+    Constructs a LightGlue image processor.
 
     Args:
         do_resize (`bool`, *optional*, defaults to `True`):
@@ -107,14 +150,14 @@ class SuperPointImageProcessor(BaseImageProcessor):
         size (`Dict[str, int]` *optional*, defaults to `{"height": 480, "width": 640}`):
             Resolution of the output image after `resize` is applied. Only has an effect if `do_resize` is set to
             `True`. Can be overriden by `size` in the `preprocess` method.
+        resample (`PILImageResampling`, *optional*, defaults to `Resampling.BILINEAR`):
+            Resampling filter to use if resizing the image. Can be overriden by `resample` in the `preprocess` method.
         do_rescale (`bool`, *optional*, defaults to `True`):
             Whether to rescale the image by the specified scale `rescale_factor`. Can be overriden by `do_rescale` in
             the `preprocess` method.
         rescale_factor (`int` or `float`, *optional*, defaults to `1/255`):
             Scale factor to use if rescaling the image. Can be overriden by `rescale_factor` in the `preprocess`
             method.
-        do_grayscale (`bool`, *optional*, defaults to `True`):
-            Whether to convert the image to grayscale. Can be overriden by `do_grayscale` in the `preprocess` method.
     """
 
     model_input_names = ["pixel_values"]
@@ -123,9 +166,9 @@ class SuperPointImageProcessor(BaseImageProcessor):
         self,
         do_resize: bool = True,
         size: Dict[str, int] = None,
+        resample: PILImageResampling = PILImageResampling.BILINEAR,
         do_rescale: bool = True,
         rescale_factor: float = 1 / 255,
-        do_grayscale: bool = True,
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
@@ -134,14 +177,15 @@ class SuperPointImageProcessor(BaseImageProcessor):
 
         self.do_resize = do_resize
         self.size = size
+        self.resample = resample
         self.do_rescale = do_rescale
         self.rescale_factor = rescale_factor
-        self.do_grayscale = do_grayscale
 
     def resize(
         self,
         image: np.ndarray,
         size: Dict[str, int],
+        resample: PILImageResampling = PILImageResampling.BILINEAR,
         data_format: Optional[Union[str, ChannelDimension]] = None,
         input_data_format: Optional[Union[str, ChannelDimension]] = None,
         **kwargs,
@@ -154,6 +198,8 @@ class SuperPointImageProcessor(BaseImageProcessor):
                 Image to resize.
             size (`Dict[str, int]`):
                 Dictionary of the form `{"height": int, "width": int}`, specifying the size of the output image.
+            resample (`PILImageResampling`, *optional*, defaults to `PILImageResampling.BICUBIC`):
+                Resampling filter to use when resizing the image.
             data_format (`ChannelDimension` or `str`, *optional*):
                 The channel dimension format of the output image. If not provided, it will be inferred from the input
                 image. Can be one of:
@@ -167,11 +213,13 @@ class SuperPointImageProcessor(BaseImageProcessor):
                 - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
                 - `"none"` or `ChannelDimension.NONE`: image in (height, width) format.
         """
+
         size = get_size_dict(size, default_to_square=False)
 
         return resize(
             image,
             size=(size["height"], size["width"]),
+            resample=resample,
             data_format=data_format,
             input_data_format=input_data_format,
             **kwargs,
@@ -182,9 +230,9 @@ class SuperPointImageProcessor(BaseImageProcessor):
         images,
         do_resize: bool = None,
         size: Dict[str, int] = None,
+        resample: PILImageResampling = None,
         do_rescale: bool = None,
         rescale_factor: float = None,
-        do_grayscale: bool = None,
         return_tensors: Optional[Union[str, TensorType]] = None,
         data_format: ChannelDimension = ChannelDimension.FIRST,
         input_data_format: Optional[Union[str, ChannelDimension]] = None,
@@ -195,7 +243,7 @@ class SuperPointImageProcessor(BaseImageProcessor):
 
         Args:
             images (`ImageInput`):
-                Image to preprocess. Expects a single or batch of images with pixel values ranging from 0 to 255. If
+                Image pairs to preprocess. Expects either a list of 2 images or a list of list of 2 images list with pixel values ranging from 0 to 255. If
                 passing in images with pixel values between 0 and 1, set `do_rescale=False`.
             do_resize (`bool`, *optional*, defaults to `self.do_resize`):
                 Whether to resize the image.
@@ -204,12 +252,13 @@ class SuperPointImageProcessor(BaseImageProcessor):
                 is resized to `(size["shortest_edge"], size["shortest_edge"])`. Otherwise, the smaller edge of the
                 image will be matched to `int(size["shortest_edge"]/ crop_pct)`, after which the image is cropped to
                 `(size["shortest_edge"], size["shortest_edge"])`. Only has an effect if `do_resize` is set to `True`.
+            resample (`PILImageResampling`, *optional*, defaults to `self.resample`):
+                Resampling filter to use if resizing the image. This can be one of `PILImageResampling`, filters. Only
+                has an effect if `do_resize` is set to `True`.
             do_rescale (`bool`, *optional*, defaults to `self.do_rescale`):
                 Whether to rescale the image values between [0 - 1].
             rescale_factor (`float`, *optional*, defaults to `self.rescale_factor`):
                 Rescale factor to rescale the image by if `do_rescale` is set to `True`.
-            do_grayscale (`bool`, *optional*, defaults to `self.do_grayscale`):
-                Whether to convert the image to grayscale.
             return_tensors (`str` or `TensorType`, *optional*):
                 The type of tensors to return. Can be one of:
                     - Unset: Return a list of `np.ndarray`.
@@ -231,12 +280,28 @@ class SuperPointImageProcessor(BaseImageProcessor):
         """
 
         do_resize = do_resize if do_resize is not None else self.do_resize
+        resample = resample if resample is not None else self.resample
         do_rescale = do_rescale if do_rescale is not None else self.do_rescale
         rescale_factor = rescale_factor if rescale_factor is not None else self.rescale_factor
-        do_grayscale = do_grayscale if do_grayscale is not None else self.do_grayscale
 
         size = size if size is not None else self.size
         size = get_size_dict(size, default_to_square=False)
+
+        image_pairs = images
+
+        if not isinstance(image_pairs, list):
+            raise ValueError(
+                "Input images must be a list containing at least 2 images because SuperGlue takes pairs of images."
+            )
+        elif len(image_pairs) == 2 and not isinstance(image_pairs[0], list):
+            images = image_pairs
+        else:
+            for pair in image_pairs:
+                if not isinstance(pair, (list, tuple)) or len(pair) != 2:
+                    raise ValueError(
+                        "Input images must be a list of pairs of images because SuperGlue takes pairs of images."
+                    )
+            images = [image for pair in image_pairs for image in pair]
 
         images = make_list_of_images(images)
 
@@ -266,7 +331,10 @@ class SuperPointImageProcessor(BaseImageProcessor):
             input_data_format = infer_channel_dimension_format(images[0])
 
         if do_resize:
-            images = [self.resize(image=image, size=size, input_data_format=input_data_format) for image in images]
+            images = [
+                self.resize(image=image, size=size, resample=resample, input_data_format=input_data_format)
+                for image in images
+            ]
 
         if do_rescale:
             images = [
@@ -274,66 +342,20 @@ class SuperPointImageProcessor(BaseImageProcessor):
                 for image in images
             ]
 
-        if input_data_format is None:
-            # We assume that all images have the same channel dimension format.
-            input_data_format = infer_channel_dimension_format(images[0])
-
-        if do_grayscale:
-            images = [convert_to_grayscale(image, input_data_format=input_data_format) for image in images]
+        # Checking if image is RGB or grayscale
+        for i in range(len(images)):
+            if not is_grayscale(images[i], input_data_format):
+                images[i] = convert_to_grayscale(images[i], input_data_format=input_data_format)
 
         images = [
             to_channel_dimension_format(image, data_format, input_channel_dim=input_data_format) for image in images
         ]
 
-        data = {"pixel_values": images}
+        if not do_resize:
+            images = pad_images(images, data_format=data_format)
+
+        image_pairs = [images[i : i + 2] for i in range(0, len(images), 2)]
+
+        data = {"pixel_values": image_pairs}
 
         return BatchFeature(data=data, tensor_type=return_tensors)
-
-    def post_process_keypoint_detection(
-        self, outputs: "SuperPointKeypointDescriptionOutput", target_sizes: Union[TensorType, List[Tuple]]
-    ) -> List[Dict[str, "torch.Tensor"]]:
-        """
-        Converts the raw output of [`SuperPointForKeypointDetection`] into lists of keypoints, scores and descriptors
-        with coordinates absolute to the original image sizes.
-
-        Args:
-            outputs ([`SuperPointKeypointDescriptionOutput`]):
-                Raw outputs of the model containing keypoints in a relative (x, y) format, with scores and descriptors.
-            target_sizes (`torch.Tensor` or `List[Tuple[int, int]]`):
-                Tensor of shape `(batch_size, 2)` or list of tuples (`Tuple[int, int]`) containing the target size
-                `(height, width)` of each image in the batch. This must be the original
-                image size (before any processing).
-        Returns:
-            `List[Dict]`: A list of dictionaries, each dictionary containing the keypoints in absolute format according
-            to target_sizes, scores and descriptors for an image in the batch as predicted by the model.
-        """
-        if len(outputs.mask) != len(target_sizes):
-            raise ValueError("Make sure that you pass in as many target sizes as the batch dimension of the mask")
-
-        if isinstance(target_sizes, List):
-            image_sizes = torch.tensor(target_sizes)
-        else:
-            if target_sizes.shape[1] != 2:
-                raise ValueError(
-                    "Each element of target_sizes must contain the size (h, w) of each image of the batch"
-                )
-            image_sizes = target_sizes
-
-        # Flip the image sizes to (width, height) and convert keypoints to absolute coordinates
-        image_sizes = torch.flip(image_sizes, [1])
-        masked_keypoints = outputs.keypoints * image_sizes[:, None]
-
-        # Convert masked_keypoints to int
-        masked_keypoints = masked_keypoints.to(torch.int32)
-
-        results = []
-        for image_mask, keypoints, scores, descriptors in zip(
-            outputs.mask, masked_keypoints, outputs.scores, outputs.descriptors
-        ):
-            indices = torch.nonzero(image_mask).squeeze(1)
-            keypoints = keypoints[indices]
-            scores = scores[indices]
-            descriptors = descriptors[indices]
-            results.append({"keypoints": keypoints, "scores": scores, "descriptors": descriptors})
-
-        return results

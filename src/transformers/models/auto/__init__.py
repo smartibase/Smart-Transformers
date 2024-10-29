@@ -91,6 +91,7 @@ else:
         "AutoModelForCTC",
         "AutoModelForDepthEstimation",
         "AutoModelForImageClassification",
+        "AutoModelForKeypointMatching",
         "AutoModelForImageSegmentation",
         "AutoModelForImageToImage",
         "AutoModelForInstanceSegmentation",
@@ -121,6 +122,7 @@ else:
         "AutoModelForZeroShotImageClassification",
         "AutoModelForZeroShotObjectDetection",
         "AutoModelForImageTextToText",
+        "AutoModelForImageMatching",
     ]
 
 try:
@@ -244,6 +246,7 @@ if TYPE_CHECKING:
             MODEL_FOR_IMAGE_TO_IMAGE_MAPPING,
             MODEL_FOR_INSTANCE_SEGMENTATION_MAPPING,
             MODEL_FOR_KEYPOINT_DETECTION_MAPPING,
+            MODEL_FOR_KEYPOINT_MATCHING_MAPPING,
             MODEL_FOR_MASK_GENERATION_MAPPING,
             MODEL_FOR_MASKED_IMAGE_MODELING_MAPPING,
             MODEL_FOR_MASKED_LM_MAPPING,
