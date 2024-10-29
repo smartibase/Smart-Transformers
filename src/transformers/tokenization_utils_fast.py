@@ -890,3 +890,5 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
             kwargs["additional_special_tokens"] = additional_special_tokens
 
         return self.__class__(tokenizer_object=tokenizer, **kwargs)
+
+
