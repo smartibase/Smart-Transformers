@@ -1095,7 +1095,7 @@ class StaticCache(Cache):
             The device on which the cache should be initialized. Should be the same as the layer.
         dtype (`torch.dtype`, *optional*, defaults to `torch.float32`):
             The default `dtype` to use when initializing the layer.
-        layer_device_map(`Dict[int, Union[str, torch.device, int]]]`, `optional`):
+        layer_device_map(`Dict[int, Union[str, torch.device, int]]`, `optional`):
             Mapping between the layers and its device. This is required when you are manually initializing the cache and the model is splitted between differents gpus.
             You can know which layers mapped to which device by checking the associated device_map: `model.hf_device_map`.
 
@@ -1273,7 +1273,7 @@ class SlidingWindowCache(StaticCache):
             The device on which the cache should be initialized. Should be the same as the layer.
         dtype (`torch.dtype`, *optional*, defaults to `torch.float32`):
             The default `dtype` to use when initializing the layer.
-        layer_device_map(`Dict[int, Union[str, torch.device, int]]]`, `optional`):
+        layer_device_map(`Dict[int, Union[str, torch.device, int]]`, `optional`):
             Mapping between the layers and its device. This is required when you are manually initializing the cache and the model is splitted between differents gpus.
             You can know which layers mapped to which device by checking the associated device_map: `model.hf_device_map`.
 
@@ -1573,7 +1573,7 @@ class HybridCache(Cache):
             The device on which the cache should be initialized. Should be the same as the layer.
         dtype (torch.dtype, *optional*, defaults to `torch.float32`):
             The default `dtype` to use when initializing the layer.
-        layer_device_map(`Dict[int, Union[str, torch.device, int]]]`, `optional`):
+        layer_device_map(`Dict[int, Union[str, torch.device, int]]`, `optional`):
             Mapping between the layers and its device. This is required when you are manually initializing the cache and the model is splitted between differents gpus.
             You can know which layers mapped to which device by checking the associated device_map: `model.hf_device_map`.
 
@@ -1870,6 +1870,9 @@ class OffloadedStaticCache(StaticCache):
             The default `dtype` to use when initializing the cache.
         offload_device (`Union[str, torch.device]`, *optional*, defaults to `cpu`):
             The device to offload to. Defaults to CPU.
+        batch_size (`int`, *optional*):
+            The batch size with which the model will be used.
+        layer_device_map (`Dict[int, Union[str, torch.device, int]]`, *optional*): Mapping between the layers and its device.
 
     Attributes:
         key_cache (`List[torch.Tensor]`):
@@ -1888,6 +1891,8 @@ class OffloadedStaticCache(StaticCache):
             The device used to offload to.
         dtype (`torch.dtype`):
             The `dtype` used to initializing the cache.
+        layer_device_map(`Dict[int, Union[str, torch.device, int]]`):
+            Mapping between the layers and its device.
 
     Example:
 
@@ -1911,17 +1916,25 @@ class OffloadedStaticCache(StaticCache):
     def __init__(
         self,
         config: PretrainedConfig,
-        max_batch_size: int,
+        max_batch_size: Optional[int],
         max_cache_len: Optional[int],
         device: Union[str, torch.device],
         dtype: Optional[torch.dtype] = None,
         offload_device: Union[str, torch.device] = torch.device("cpu"),
+        batch_size: Optional[int] = None,
+        layer_device_map: Optional[Dict[int, Union[str, torch.device, int]]] = None,
     ) -> None:
-        self.max_batch_size = max_batch_size
+        if batch_size is not None:
+            logger.warning_once(
+                f"The 'batch_size' argument of {self.__class__.__name__} is deprecated and will be removed in "
+                "v4.47. Use the more precisely named 'max_batch_size' argument instead."
+            )
+        self.max_batch_size = max_batch_size or batch_size
         self.max_cache_len = config.max_position_embeddings if max_cache_len is None else max_cache_len
         self.device = torch.device(device)
         self.offload_device = torch.device(offload_device)
         self.dtype = dtype if dtype is not None else torch.float32
+        self.layer_device_map = layer_device_map
 
         # Some model define a custom `head_dim` != config.hidden_size // config.num_attention_heads
         head_dim = config.head_dim if hasattr(config, "head_dim") else config.hidden_size // config.num_attention_heads
@@ -1930,7 +1943,7 @@ class OffloadedStaticCache(StaticCache):
             config.num_attention_heads if config.num_key_value_heads is None else config.num_key_value_heads
         )
 
-        cache_shape = (max_batch_size, num_key_value_heads, self.max_cache_len, head_dim)
+        cache_shape = (self.max_batch_size, num_key_value_heads, self.max_cache_len, head_dim)
 
         # Create offloaded CPU tensors.
         self.key_cache: List[torch.Tensor] = []
