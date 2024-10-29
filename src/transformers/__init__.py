@@ -169,6 +169,11 @@ _import_structure = {
         "AltCLIPTextConfig",
         "AltCLIPVisionConfig",
     ],
+    "models.aria": [
+        "AriaConfig",
+        "AriaTextConfig",
+        "AriaProcessor",
+    ],
     "models.audio_spectrogram_transformer": [
         "ASTConfig",
         "ASTFeatureExtractor",
@@ -1398,6 +1403,13 @@ else:
             "AltCLIPVisionModel",
         ]
     )
+    _import_structure["models.aria"].extend(
+        [
+            "AriaForConditionalGeneration",
+            "AriaPreTrainedModel",
+            "AriaTextModel",
+        ]
+    )
     _import_structure["models.audio_spectrogram_transformer"].extend(
         [
             "ASTForAudioClassification",
@@ -2453,6 +2465,8 @@ else:
             "Idefics3Model",
             "Idefics3PreTrainedModel",
             "Idefics3Processor",
+            "Idefics3VisionTransformer",
+            "Idefics3VisionConfig",
         ]
     )
     _import_structure["models.imagegpt"].extend(
@@ -5011,6 +5025,11 @@ if TYPE_CHECKING:
         AltCLIPTextConfig,
         AltCLIPVisionConfig,
     )
+    from .models.aria import (
+        AriaConfig,
+        AriaProcessor,
+        AriaTextConfig,
+    )
     from .models.audio_spectrogram_transformer import (
         ASTConfig,
         ASTFeatureExtractor,
@@ -6299,6 +6318,12 @@ if TYPE_CHECKING:
             AltCLIPTextModel,
             AltCLIPVisionModel,
         )
+        from .models.aria import (
+            AriaForCausalLM,
+            AriaForConditionalGeneration,
+            AriaPreTrainedModel,
+            AriaTextModel,
+        )
         from .models.audio_spectrogram_transformer import (
             ASTForAudioClassification,
             ASTModel,
@@ -7163,6 +7188,8 @@ if TYPE_CHECKING:
             Idefics3Model,
             Idefics3PreTrainedModel,
             Idefics3Processor,
+            Idefics3VisionConfig,
+            Idefics3VisionTransformer,
         )
         from .models.imagegpt import (
             ImageGPTForCausalImageModeling,
